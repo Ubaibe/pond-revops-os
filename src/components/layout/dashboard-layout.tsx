@@ -18,17 +18,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div
         className={cn(
           "transition-all duration-200 min-h-screen",
-          "lg:pl-64"
         )}
         style={{
           marginLeft: sidebarCollapsed ? "4rem" : "16rem",
         }}
       >
         <TopBar />
-        <main className="p-4 lg:p-6" id="main-content" tabIndex={-1}>
-          <div className="mx-auto max-w-7xl">
-            {children}
-          </div>
+        <main className="p-4 lg:p-6 max-w-7xl" id="main-content" tabIndex={-1}>
+          {children}
         </main>
       </div>
     </div>
