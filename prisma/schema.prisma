@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?
+  logo      String?
+  status    String   @default("ACTIVE")
+  metadata  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies   Company[]
+  contacts    Contact[]
+  deals       Deal[]
+  activities  Activity[]
+  meetings    Meeting[]
+  prospects   Prospect[]
+  campaigns   Campaign[]
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?
+  size      String?
+  industry  String?
+  location  String?
+  metadata  String?
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+  deals    Deal[]
+
+  @@index([clientId])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  title     String?
+  linkedin  String?
+  avatar    String?
+  metadata  String?
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals      Deal[]
+  activities Activity[]
+  meetings   Meeting[]
+
+  @@index([clientId])
+  @@index([companyId])
+  @@index([email])
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  name        String
+  value       Float      @default(0)
+  stage       String     @default("LEAD")
+  probability Int        @default(10)
+  expectedClose DateTime?
+  metadata    String?
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  companyId   String?
+  company     Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId   String?
+  contact     Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  activities Activity[]
+  meetings   Meeting[]
+
+  @@index([clientId])
+  @@index([stage])
+  @@index([companyId])
+  @@index([contactId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  type      String
+  subject   String?
+  body      String?
+  metadata  String?
+  clientId  String
+  client    Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dealId    String?
+  deal      Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+
+  @@index([clientId])
+  @@index([dealId])
+  @@index([contactId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Meeting {
+  id          String   @id @default(cuid())
+  title       String
+  startTime   DateTime
+  endTime     DateTime?
+  platform    String?
+  meetingUrl  String?
+  recordingUrl String?
+  notes       String?
+  metadata    String?
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dealId      String?
+  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([dealId])
+  @@index([contactId])
+  @@index([startTime])
+}
+
+model Prospect {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  title       String?
+  company     String?
+  linkedin    String?
+  source      String?
+  status      String   @default("NEW")
+  score       Int      @default(0)
+  metadata    String?
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([email])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  status      String   @default("DRAFT")
+  metadata    String?
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prospects Prospect[]
+
+  @@index([clientId])
+}
