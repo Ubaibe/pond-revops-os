@@ -5,6 +5,44 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
+  // Ensure schema columns exist for the current Prisma schema without
+  // using migrations or db push. This is additive only and idempotent.
+  const alterStatements = [
+    'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "prospectId" TEXT;',
+    'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "meetingId" TEXT;',
+    'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "dealId" TEXT;',
+    'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "contactId" TEXT;',
+    'ALTER TABLE "Activity" ADD COLUMN IF NOT EXISTS "clientId" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "campaignId" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "convertedDealId" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "metadata" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "source" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "phone" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "title" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "company" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "linkedin" TEXT;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "score" INTEGER;',
+    'ALTER TABLE "Prospect" ADD COLUMN IF NOT EXISTS "companyId" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "contactId" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "dealId" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "metadata" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "meetingUrl" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "recordingUrl" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "notes" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "platform" TEXT;',
+    'ALTER TABLE "Meeting" ADD COLUMN IF NOT EXISTS "endTime" TIMESTAMPTZ;',
+    'ALTER TABLE "Campaign" ADD COLUMN IF NOT EXISTS "type" TEXT;',
+    'ALTER TABLE "Campaign" ADD COLUMN IF NOT EXISTS "status" TEXT;',
+    'ALTER TABLE "Campaign" ADD COLUMN IF NOT EXISTS "metadata" TEXT;',
+  ];
+  for (const stmt of alterStatements) {
+    try {
+      await prisma.$executeRawUnsafe(stmt);
+    } catch (e) {
+      // Ignore errors for statements that fail (e.g. column already exists)
+    }
+  }
+
   // Clear existing data (respect FK order: child tables first)
   await prisma.activity.deleteMany();
   await prisma.meeting.deleteMany();
@@ -46,6 +84,33 @@ async function main() {
   });
 
   console.log('✅ Created 3 clients');
+
+  // Create 2 campaigns per client (6 total) for outbound sequences
+  const campaignDefs = [
+    { name: 'Climate SaaS Growth', clientId: northstar.id },
+    { name: 'Sustainability Leaders', clientId: northstar.id },
+    { name: 'Government Digital Transformation', clientId: civiclayer.id },
+    { name: 'Public Sector Operations', clientId: civiclayer.id },
+    { name: 'HealthTech Partnerships', clientId: wellspring.id },
+    { name: 'Healthcare Innovation', clientId: wellspring.id },
+  ];
+
+  const campaignsByClient: Record<string, any[]> = {};
+  for (const def of campaignDefs) {
+    const campaign = await prisma.campaign.create({
+      data: {
+        name: def.name,
+        type: 'OUTBOUND',
+        status: 'ACTIVE',
+        metadata: JSON.stringify({ sequences: 5 }),
+        clientId: def.clientId,
+      },
+    });
+    if (!campaignsByClient[def.clientId]) campaignsByClient[def.clientId] = [];
+    campaignsByClient[def.clientId].push(campaign);
+  }
+
+  console.log('✅ Created 6 campaigns');
 
   // 8 companies per client = 24 total
   const companiesData = [
@@ -738,6 +803,49 @@ async function main() {
 
   console.log('✅ Created 15 meetings');
 
+  // Deterministically link a subset of activities to meetings.
+  // Matches are constrained to the same client, deal, and contact so that
+  // no cross-client or cross-deal relationships are created.
+  const meetingsForLinking = await prisma.meeting.findMany({
+    include: { client: true },
+    orderBy: { id: 'asc' },
+  });
+
+  const activitiesForLinking = await prisma.activity.findMany();
+
+  const activitiesByCompositeKey = new Map<string, typeof activitiesForLinking>();
+  for (const a of activitiesForLinking) {
+    const key = `${a.clientId}|${a.dealId ?? 'null'}|${a.contactId ?? 'null'}`;
+    if (!activitiesByCompositeKey.has(key)) {
+      activitiesByCompositeKey.set(key, []);
+    }
+    activitiesByCompositeKey.get(key)!.push(a);
+  }
+
+  // Sort candidates deterministically by ID for stable assignment
+  for (const candidates of activitiesByCompositeKey.values()) {
+    candidates.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  let linkedCount = 0;
+  for (const meeting of meetingsForLinking) {
+    const key = `${meeting.clientId}|${meeting.dealId ?? 'null'}|${meeting.contactId ?? 'null'}`;
+    const candidates = activitiesByCompositeKey.get(key) || [];
+
+    // Link up to 2 activities per meeting
+    const targetCount = Math.min(2, candidates.length);
+    for (let ai = 0; ai < targetCount; ai++) {
+      const activity = candidates[ai];
+      await prisma.activity.update({
+        where: { id: activity.id },
+        data: { meetingId: meeting.id },
+      });
+      linkedCount++;
+    }
+  }
+
+  console.log(`✅ Linked ${linkedCount} activities to meetings`);
+
   // Prospect statuses from schema
   const prospectStatuses = ['NEW', 'ENRICHED', 'QUALIFIED', 'CONTACTED', 'ENGAGED', 'CONVERTED', 'DISQUALIFIED'];
   const prospectSources = ['Apollo', 'Clay', 'LinkedIn', 'Website', 'Referral', 'Manual Research'];
@@ -781,11 +889,87 @@ async function main() {
     { firstName: 'Samantha', lastName: 'Clark', email: 'sclark@hrtech.example', phone: '+1-212-555-0210', title: 'Director of HR Tech', company: 'HRTech Benefits', source: 'Referral', status: 'ENGAGED', score: 84, clientId: wellspring.id, companyName: 'HRTech Benefits' },
   ];
 
+  // Create canonical Company records for the distinct prospect companies.
+  // The 30 seeded Prospects use free-text company names that do NOT match
+  // the existing 24 Company.name values, so we create client-scoped
+  // canonical Company records for each distinct (clientId, name) pair.
+  const clientIndustry: Record<string, string> = {
+    [northstar.id]: 'Climate / Sustainability',
+    [civiclayer.id]: 'GovTech / Public Infrastructure',
+    [wellspring.id]: 'Health / Workforce Benefits',
+  };
+
+  const clientRegion: Record<string, string> = {
+    [northstar.id]: 'NA',
+    [civiclayer.id]: 'NA',
+    [wellspring.id]: 'EU',
+  };
+
+  const clientDefaultLocation: Record<string, string> = {
+    [northstar.id]: 'San Francisco, CA',
+    [civiclayer.id]: 'Washington, DC',
+    [wellspring.id]: 'New York, NY',
+  };
+
+  const distinctProspectCompanies: { name: string; clientId: string }[] = [];
+  const seenCompanyKeys = new Set<string>();
+  for (const prospect of prospectsData) {
+    const key = `${prospect.clientId}|${prospect.company}`;
+    if (!seenCompanyKeys.has(key)) {
+      seenCompanyKeys.add(key);
+      distinctProspectCompanies.push({ name: prospect.company, clientId: prospect.clientId });
+    }
+  }
+
+  // Sort deterministically by clientId then name
+  distinctProspectCompanies.sort((a, b) => {
+    if (a.clientId < b.clientId) return -1;
+    if (a.clientId > b.clientId) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const canonicalCompanyMap = new Map<string, string>(); // key -> company.id
+  for (let i = 0; i < distinctProspectCompanies.length; i++) {
+    const def = distinctProspectCompanies[i];
+    const domain = def.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.example';
+    const created = await prisma.company.create({
+      data: {
+        name: def.name,
+        domain,
+        size: '11-50',
+        industry: clientIndustry[def.clientId] || 'Unknown',
+        location: clientDefaultLocation[def.clientId] || 'Unknown',
+        metadata: JSON.stringify({
+          source: 'prospect',
+          tier: 'SMB',
+          region: clientRegion[def.clientId] || 'Unknown',
+          canonical: true,
+        }),
+        clientId: def.clientId,
+      },
+    });
+    canonicalCompanyMap.set(`${def.clientId}|${def.name}`, created.id);
+  }
+
+  console.log(`✅ Created ${distinctProspectCompanies.length} canonical prospect companies`);
+
   // Create prospects by matching existing companies
+  // Deterministic campaign assignment: round-robin per client
+  const clientProspectCounters: Record<string, number> = {};
   for (const prospect of prospectsData) {
     const createdAt = new Date(baseDate);
     createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 60));
-    
+
+    const clientCampaigns = campaignsByClient[prospect.clientId] || [];
+    const campaignIndex = clientProspectCounters[prospect.clientId] || 0;
+    clientProspectCounters[prospect.clientId] = campaignIndex + 1;
+    const assignedCampaign = clientCampaigns.length > 0
+      ? clientCampaigns[campaignIndex % clientCampaigns.length]
+      : null;
+
+    const canonicalKey = `${prospect.clientId}|${prospect.company}`;
+    const assignedCompanyId = canonicalCompanyMap.get(canonicalKey) || null;
+
     await prisma.prospect.create({
       data: {
         firstName: prospect.firstName,
@@ -799,6 +983,8 @@ async function main() {
         status: prospect.status,
         score: prospect.score,
         clientId: prospect.clientId,
+        campaignId: assignedCampaign?.id,
+        companyId: assignedCompanyId,
         createdAt,
         updatedAt: new Date(createdAt.getTime() + Math.floor(Math.random() * 20) * 24 * 60 * 60 * 1000),
         metadata: JSON.stringify({ 

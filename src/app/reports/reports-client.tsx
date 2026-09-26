@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
   BarChart,
   Bar,
@@ -20,7 +22,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Download, Filter, Calendar } from 'lucide-react';
+import { Download, Filter, Calendar, Users, ChevronDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 interface StageData {
@@ -47,6 +49,11 @@ interface ClientData {
   fill: string;
 }
 
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
 interface ReportsClientProps {
   totalPipeline: number;
   weightedPipeline: number;
@@ -58,6 +65,8 @@ interface ReportsClientProps {
   stageData: StageData[];
   activityData: ActivityData[];
   clientData: ClientData[];
+  clients: ClientOption[];
+  selectedClient: ClientOption | null;
 }
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#6366f1', '#f59e0b', '#f97316', '#22c55e', '#ef4444'];
@@ -73,16 +82,61 @@ export function ReportsClient({
   stageData,
   activityData,
   clientData,
+  clients,
+  selectedClient,
 }: ReportsClientProps) {
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-            <p className="text-muted-foreground mt-1">Revenue analytics and pipeline insights</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {selectedClient ? (
+                <span className="flex items-center gap-2">
+                  Reports
+                  <span className="text-muted-foreground font-normal">/</span>
+                  <span className="font-normal">{selectedClient.name}</span>
+                </span>
+              ) : (
+                'Reports'
+              )}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {selectedClient
+                ? `Analytics for ${selectedClient.name}`
+                : 'Revenue analytics and pipeline insights'}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>{selectedClient?.name || 'All Clients'}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/reports"
+                    className={!selectedClient ? 'font-medium' : ''}
+                  >
+                    All Clients
+                  </Link>
+                </DropdownMenuItem>
+                {clients.map((client) => (
+                  <DropdownMenuItem key={client.id} asChild>
+                    <Link
+                      href={`/reports?clientId=${client.id}`}
+                      className={selectedClient?.id === client.id ? 'font-medium' : ''}
+                    >
+                      {client.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline">
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -106,25 +160,46 @@ export function ReportsClient({
             <CardContent>
               <div className="text-3xl font-bold">{formatCurrency(totalPipeline)}</div>
               <p className="text-xs text-muted-foreground">All non-lost deals</p>
+              <Link href={selectedClient ? `/pipeline?clientId=${selectedClient.id}` : '/pipeline'}>
+                <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                  View deals →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Weighted Pipeline</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{formatCurrency(weightedPipeline)}</div>
-              <p className="text-xs text-muted-foreground">Value × Probability</p>
-            </CardContent>
+              <CardContent>
+                <div className="text-3xl font-bold">{formatCurrency(weightedPipeline)}</div>
+                <p className="text-xs text-muted-foreground">Value × Probability</p>
+                <Link href={selectedClient ? `/pipeline?clientId=${selectedClient.id}` : '/pipeline'}>
+                  <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                    View deals →
+                  </Button>
+                </Link>
+              </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Won Revenue</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-emerald-500">{formatCurrency(wonRevenue)}</div>
-              <p className="text-xs text-muted-foreground">{clientData.reduce((sum, c) => sum + (c.wonRevenue > 0 ? 1 : 0), 0)} clients with wins</p>
-            </CardContent>
+              <CardContent>
+                <div className="text-3xl font-bold text-emerald-500">{formatCurrency(wonRevenue)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {selectedClient
+                    ? wonRevenue > 0
+                      ? `${selectedClient.name}'s wins`
+                      : 'No wins yet'
+                    : `${clientData.reduce((sum, c) => sum + (c.wonRevenue > 0 ? 1 : 0), 0)} clients with wins`}
+                </p>
+                <Link href={selectedClient ? `/pipeline?clientId=${selectedClient.id}` : '/pipeline'}>
+                  <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                    View deals →
+                  </Button>
+                </Link>
+              </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -133,6 +208,48 @@ export function ReportsClient({
             <CardContent>
               <div className="text-3xl font-bold">{winRate}%</div>
               <p className="text-xs text-muted-foreground">Won / Total Deals</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Deals</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{openDealsCount}</div>
+              <p className="text-xs text-muted-foreground">Active pipeline deals</p>
+              <Link href={selectedClient ? `/pipeline?clientId=${selectedClient.id}` : '/pipeline'}>
+                <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                  View deals →
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Meetings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{meetingsCount}</div>
+              <p className="text-xs text-muted-foreground">Scheduled meetings</p>
+              <Link href={selectedClient ? `/meetings?clientId=${selectedClient.id}` : '/meetings'}>
+                <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                  View meetings →
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Prospects</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{prospectsCount}</div>
+              <p className="text-xs text-muted-foreground">Lead pipeline</p>
+              <Link href={selectedClient ? `/prospects?clientId=${selectedClient.id}` : '/prospects'}>
+                <Button variant="link" className="p-0 h-auto text-xs mt-1">
+                  View prospects →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -210,64 +327,74 @@ export function ReportsClient({
           </TabsContent>
 
           <TabsContent value="revenue">
-            <div className="grid gap-4 lg:grid-cols-2">
+            {selectedClient ? (
               <Card>
-                <CardHeader>
-                  <CardTitle>Pipeline by Client</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={clientData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                        <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} opacity={0.5} />
-                        <YAxis dataKey="name" type="category" width={120} opacity={0.5} />
-                        <Tooltip
-                          formatter={(value: number) => [formatCurrency(value), 'Pipeline']}
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                        />
-                        <Bar dataKey="pipelineValue" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Pipeline" />
-                        <Bar dataKey="weightedPipeline" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Weighted" />
-                        <Bar dataKey="wonRevenue" fill="#22c55e" radius={[0, 4, 4, 0]} name="Won" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">
+                    Select "All Clients" to view cross-client revenue comparison.
+                  </p>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pipeline by Client</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={clientData} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} opacity={0.5} />
+                          <YAxis dataKey="name" type="category" width={120} opacity={0.5} />
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value), 'Pipeline']}
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                          />
+                          <Bar dataKey="pipelineValue" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Pipeline" />
+                          <Bar dataKey="weightedPipeline" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Weighted" />
+                          <Bar dataKey="wonRevenue" fill="#22c55e" radius={[0, 4, 4, 0]} name="Won" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue Composition</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={clientData.filter(c => c.wonRevenue > 0 || c.pipelineValue > 0)}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={2}
-                          dataKey="wonRevenue"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {clientData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Revenue Composition</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={clientData.filter(c => c.wonRevenue > 0 || c.pipelineValue > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            dataKey="wonRevenue"
+                            nameKey="name"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {clientData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => [formatCurrency(value), 'Revenue']}
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="activity">
@@ -275,62 +402,77 @@ export function ReportsClient({
               <CardHeader>
                 <CardTitle>Activity Overview</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {activityData.map((metric, i) => (
-                    <div key={metric.type} className="p-4 border rounded-lg text-center">
-                      <div className="text-3xl font-bold" style={{ color: COLORS[i % COLORS.length] }}>
-                        {metric.count}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{metric.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
+               <CardContent>
+                 <div className="grid gap-4 md:grid-cols-3">
+                   {activityData.map((metric, i) => (
+                     <div key={metric.type} className="p-4 border rounded-lg text-center">
+                       <div className="text-3xl font-bold" style={{ color: COLORS[i % COLORS.length] }}>
+                         {metric.count}
+                       </div>
+                       <div className="text-sm text-muted-foreground">{metric.label}</div>
+                     </div>
+                   ))}
+                 </div>
+                 <Link href={selectedClient ? `/activities?clientId=${selectedClient.id}` : '/activities'}>
+                   <Button variant="link" className="p-0 h-auto text-xs mt-3">
+                     View activities →
+                   </Button>
+                 </Link>
+               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="clients">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Comparison</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b text-left text-sm text-muted-foreground">
-                        <th className="pb-3 font-medium">Client</th>
-                        <th className="pb-3 font-medium text-right">Open Deals</th>
-                        <th className="pb-3 font-medium text-right">Pipeline</th>
-                        <th className="pb-3 font-medium text-right">Weighted Pipeline</th>
-                        <th className="pb-3 font-medium text-right">Won Revenue</th>
-                        <th className="pb-3 font-medium text-right">Meetings</th>
-                        <th className="pb-3 font-medium text-right">Prospects</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientData.map((client) => (
-                        <tr key={client.name} className="border-b">
-                          <td className="py-3 font-medium">
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded" style={{ backgroundColor: client.fill }} />
-                              {client.name}
-                            </div>
-                          </td>
-                          <td className="py-3 text-right">{client.openDeals}</td>
-                          <td className="py-3 text-right">{formatCurrency(client.pipelineValue)}</td>
-                          <td className="py-3 text-right">{formatCurrency(client.weightedPipeline)}</td>
-                          <td className="py-3 text-right">{formatCurrency(client.wonRevenue)}</td>
-                          <td className="py-3 text-right">{client.meetingsCount}</td>
-                          <td className="py-3 text-right">{client.prospectsCount}</td>
+            {selectedClient ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">
+                    Select "All Clients" to view client comparison.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Client Comparison</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b text-left text-sm text-muted-foreground">
+                          <th className="pb-3 font-medium">Client</th>
+                          <th className="pb-3 font-medium text-right">Open Deals</th>
+                          <th className="pb-3 font-medium text-right">Pipeline</th>
+                          <th className="pb-3 font-medium text-right">Weighted Pipeline</th>
+                          <th className="pb-3 font-medium text-right">Won Revenue</th>
+                          <th className="pb-3 font-medium text-right">Meetings</th>
+                          <th className="pb-3 font-medium text-right">Prospects</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                      </thead>
+                      <tbody>
+                        {clientData.map((client) => (
+                          <tr key={client.name} className="border-b">
+                            <td className="py-3 font-medium">
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded" style={{ backgroundColor: client.fill }} />
+                                {client.name}
+                              </div>
+                            </td>
+                            <td className="py-3 text-right">{client.openDeals}</td>
+                            <td className="py-3 text-right">{formatCurrency(client.pipelineValue)}</td>
+                            <td className="py-3 text-right">{formatCurrency(client.weightedPipeline)}</td>
+                            <td className="py-3 text-right">{formatCurrency(client.wonRevenue)}</td>
+                            <td className="py-3 text-right">{client.meetingsCount}</td>
+                            <td className="py-3 text-right">{client.prospectsCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

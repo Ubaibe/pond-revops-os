@@ -8,26 +8,25 @@ datasource db {
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  name      String
-  domain    String?
-  logo      String?
-  status    String   @default("ACTIVE")
-  metadata  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  companies   Company[]
-  contacts    Contact[]
-  deals       Deal[]
-  activities  Activity[]
-  meetings    Meeting[]
-  prospects   Prospect[]
-  campaigns   Campaign[]
+  id         String     @id @default(cuid())
+  name       String
+  domain     String?
+  logo       String?
+  status     String     @default("ACTIVE")
+  metadata   String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  activities Activity[]
+  campaigns  Campaign[]
+  companies  Company[]
+  contacts   Contact[]
+  deals      Deal[]
+  meetings   Meeting[]
+  prospects  Prospect[]
 }
 
 model Company {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   name      String
   domain    String?
   size      String?
@@ -35,35 +34,34 @@ model Company {
   location  String?
   metadata  String?
   clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  contacts Contact[]
-  deals    Deal[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+  deals     Deal[]
+  prospects Prospect[]
 
   @@index([clientId])
 }
 
 model Contact {
-  id        String   @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String?
-  phone     String?
-  title     String?
-  linkedin  String?
-  avatar    String?
-  metadata  String?
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  deals      Deal[]
+  id         String     @id @default(cuid())
+  firstName  String
+  lastName   String
+  email      String?
+  phone      String?
+  title      String?
+  linkedin   String?
+  avatar     String?
+  metadata   String?
+  clientId   String
+  companyId  String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   activities Activity[]
+  client     Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company    Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals      Deal[]
   meetings   Meeting[]
 
   @@index([clientId])
@@ -72,24 +70,24 @@ model Contact {
 }
 
 model Deal {
-  id          String   @id @default(cuid())
-  name        String
-  value       Float      @default(0)
-  stage       String     @default("LEAD")
-  probability Int        @default(10)
-  expectedClose DateTime?
-  metadata    String?
-  clientId    String
-  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  companyId   String?
-  company     Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  contactId   String?
-  contact     Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  activities Activity[]
-  meetings   Meeting[]
+  id                 String     @id @default(cuid())
+  name               String
+  value              Float      @default(0)
+  stage              String     @default("LEAD")
+  probability        Int        @default(10)
+  expectedClose      DateTime?
+  metadata           String?
+  clientId           String
+  companyId          String?
+  contactId          String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  activities         Activity[]
+  client             Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  company            Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact            Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  meetings           Meeting[]
+  convertedProspects Prospect[] @relation("ProspectConvertedDeal")
 
   @@index([clientId])
   @@index([stage])
@@ -98,44 +96,51 @@ model Deal {
 }
 
 model Activity {
-  id        String   @id @default(cuid())
-  type      String
-  subject   String?
-  body      String?
-  metadata  String?
-  clientId  String
-  client    Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  dealId    String?
-  deal      Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  contactId String?
-  contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  createdAt DateTime     @default(now())
+  id         String    @id @default(cuid())
+  type       String
+  subject    String?
+  body       String?
+  metadata   String?
+  clientId   String
+  dealId     String?
+  contactId  String?
+  prospectId String?
+  meetingId  String?
+  createdAt  DateTime  @default(now())
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  prospect   Prospect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+  meeting    Meeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([dealId])
   @@index([contactId])
+  @@index([prospectId])
+  @@index([meetingId])
   @@index([type])
   @@index([createdAt])
 }
 
 model Meeting {
-  id          String   @id @default(cuid())
-  title       String
-  startTime   DateTime
-  endTime     DateTime?
-  platform    String?
-  meetingUrl  String?
+  id           String     @id @default(cuid())
+  title        String
+  startTime    DateTime
+  endTime      DateTime?
+  platform     String?
+  meetingUrl   String?
   recordingUrl String?
-  notes       String?
-  metadata    String?
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  dealId      String?
-  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  contactId   String?
-  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notes        String?
+  metadata     String?
+  clientId     String
+  dealId       String?
+  contactId    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  client       Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contact      Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deal         Deal?      @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  activities   Activity[]
 
   @@index([clientId])
   @@index([dealId])
@@ -144,42 +149,48 @@ model Meeting {
 }
 
 model Prospect {
-  id          String   @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String
-  phone       String?
-  title       String?
-  company     String?
-  linkedin    String?
-  source      String?
-  status      String   @default("NEW")
-  score       Int      @default(0)
-  metadata    String?
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  campaignId  String?
-  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String     @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String
+  phone           String?
+  title           String?
+  company         String?
+  linkedin        String?
+  source          String?
+  status          String     @default("NEW")
+  score           Int        @default(0)
+  metadata        String?
+  clientId        String
+  campaignId      String?
+  convertedDealId String?
+  companyId       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  campaign        Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  client          Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  companyRecord   Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  activities      Activity[]
+  convertedDeal   Deal?      @relation("ProspectConvertedDeal", fields: [convertedDealId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([campaignId])
+  @@index([companyId])
+  @@index([convertedDealId])
   @@index([status])
   @@index([email])
 }
 
 model Campaign {
-  id          String   @id @default(cuid())
-  name        String
-  type        String
-  status      String   @default("DRAFT")
-  metadata    String?
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id        String     @id @default(cuid())
+  name      String
+  type      String
+  status    String     @default("DRAFT")
+  metadata  String?
+  clientId  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   prospects Prospect[]
 
   @@index([clientId])

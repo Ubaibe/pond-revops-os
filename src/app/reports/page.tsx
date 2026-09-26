@@ -2,20 +2,35 @@ import { prisma } from '@/lib/prisma';
 import { ReportsClient } from './reports-client';
 import { DEAL_STAGES } from '@/data/types';
 
-export default async function ReportsPage() {
-  const [deals, meetings, prospects, activities, clients] = await Promise.all([
+interface ReportsPageProps {
+  searchParams: Promise<{ clientId?: string }>;
+}
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const { clientId } = await searchParams;
+
+  const [clients, deals, meetings, prospects, activities] = await Promise.all([
+    prisma.client.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
     prisma.deal.findMany({
+      where: clientId ? { clientId } : undefined,
       include: { client: true },
       orderBy: { updatedAt: 'desc' },
     }),
-    prisma.meeting.findMany(),
-    prisma.prospect.findMany(),
-    prisma.activity.findMany(),
-    prisma.client.findMany({
-      include: { deals: true, prospects: true, meetings: true },
-      orderBy: { name: 'asc' },
+    prisma.meeting.findMany({
+      where: clientId ? { clientId } : undefined,
+    }),
+    prisma.prospect.findMany({
+      where: clientId ? { clientId } : undefined,
+    }),
+    prisma.activity.findMany({
+      where: clientId ? { clientId } : undefined,
     }),
   ]);
+
+  const selectedClient = clients.find(c => c.id === clientId) || null;
 
   const openDeals = deals.filter(d => d.stage !== 'WON' && d.stage !== 'LOST');
   const wonDeals = deals.filter(d => d.stage === 'WON');
@@ -47,23 +62,42 @@ export default async function ReportsPage() {
     { type: 'LINKEDIN_TASK', label: 'LinkedIn Tasks', count: activities.filter(a => a.type === 'LINKEDIN_TASK').length },
   ];
 
-  const clientData = clients.map((client, i) => {
-    const clientDeals = deals.filter(d => d.clientId === client.id);
-    const clientOpenDeals = clientDeals.filter(d => d.stage !== 'WON' && d.stage !== 'LOST');
-    const clientWonDeals = clientDeals.filter(d => d.stage === 'WON');
-    const clientNotLostDeals = clientDeals.filter(d => d.stage !== 'LOST');
+  let clientData: Array<{
+    name: string;
+    openDeals: number;
+    pipelineValue: number;
+    weightedPipeline: number;
+    wonRevenue: number;
+    meetingsCount: number;
+    prospectsCount: number;
+    fill: string;
+  }> = [];
 
-    return {
-      name: client.name,
-      openDeals: clientOpenDeals.length,
-      pipelineValue: clientNotLostDeals.reduce((sum, d) => sum + d.value, 0),
-      weightedPipeline: clientNotLostDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0),
-      wonRevenue: clientWonDeals.reduce((sum, d) => sum + d.value, 0),
-      meetingsCount: client.meetings.length,
-      prospectsCount: client.prospects.length,
-      fill: ['#3b82f6', '#8b5cf6', '#6366f1'][i % 3],
-    };
-  });
+  if (!selectedClient) {
+    // Only show client breakdown in all-clients view
+    const allClients = await prisma.client.findMany({
+      include: { deals: true, prospects: true, meetings: true },
+      orderBy: { name: 'asc' },
+    });
+
+    clientData = allClients.map((client, i) => {
+      const clientDeals = deals.filter(d => d.clientId === client.id);
+      const clientOpenDeals = clientDeals.filter(d => d.stage !== 'WON' && d.stage !== 'LOST');
+      const clientWonDeals = clientDeals.filter(d => d.stage === 'WON');
+      const clientNotLostDeals = clientDeals.filter(d => d.stage !== 'LOST');
+
+      return {
+        name: client.name,
+        openDeals: clientOpenDeals.length,
+        pipelineValue: clientNotLostDeals.reduce((sum, d) => sum + d.value, 0),
+        weightedPipeline: clientNotLostDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0),
+        wonRevenue: clientWonDeals.reduce((sum, d) => sum + d.value, 0),
+        meetingsCount: client.meetings.length,
+        prospectsCount: client.prospects.length,
+        fill: ['#3b82f6', '#8b5cf6', '#6366f1'][i % 3],
+      };
+    });
+  }
 
   return <ReportsClient
     totalPipeline={totalPipeline}
@@ -76,5 +110,7 @@ export default async function ReportsPage() {
     stageData={stageData}
     activityData={activityData}
     clientData={clientData}
+    clients={clients}
+    selectedClient={selectedClient}
   />;
 }

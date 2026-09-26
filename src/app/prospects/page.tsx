@@ -1,12 +1,20 @@
 import { prisma } from '@/lib/prisma';
 import { ProspectsClient } from './prospects-client';
 
-export default async function ProspectsPage() {
+interface ProspectsPageProps {
+  searchParams: Promise<{ clientId?: string }>;
+}
+
+export default async function ProspectsPage({ searchParams }: ProspectsPageProps) {
+  const { clientId } = await searchParams;
+
   const [prospects, campaigns, clients] = await Promise.all([
     prisma.prospect.findMany({
+      where: clientId ? { clientId } : undefined,
       include: {
         client: true,
         campaign: true,
+        companyRecord: true,
       },
       orderBy: { createdAt: 'desc' },
     }),
@@ -19,5 +27,5 @@ export default async function ProspectsPage() {
     }),
   ]);
 
-  return <ProspectsClient initialProspects={prospects} campaigns={campaigns} clients={clients} />;
+  return <ProspectsClient initialProspects={prospects} campaigns={campaigns} clients={clients} selectedClientId={clientId || undefined} />;
 }

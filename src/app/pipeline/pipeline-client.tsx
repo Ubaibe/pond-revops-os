@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, MoreHorizontal, DollarSign, Users } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, DollarSign, Users, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { DEAL_STAGES } from '@/data/types';
@@ -19,7 +19,7 @@ interface DealWithRelations {
   stage: string;
   probability: number;
   expectedClose: Date | string | null;
-  client: { name: string } | null;
+  client: { name: string; id: string } | null;
   company: { name: string } | null;
   contact: { firstName: string; lastName: string } | null;
 }
@@ -30,9 +30,16 @@ interface StageConfig {
   order: number;
 }
 
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
 interface PipelineClientProps {
   initialDeals: DealWithRelations[];
   stages: StageConfig[];
+  clients: ClientOption[];
+  selectedClient: ClientOption | null;
 }
 
 const getDealStageColor = (stage: string): string => {
@@ -48,16 +55,66 @@ const getDealStageColor = (stage: string): string => {
   return colors[stage] || colors.LEAD;
 };
 
-export function PipelineClient({ initialDeals, stages }: PipelineClientProps) {
+export function PipelineClient({ initialDeals, stages, clients, selectedClient }: PipelineClientProps) {
+  const notLostDeals = initialDeals.filter(d => d.stage !== 'LOST');
+  const wonDeals = initialDeals.filter(d => d.stage === 'WON');
+  const openDeals = initialDeals.filter(d => d.stage !== 'WON' && d.stage !== 'LOST');
+
+  const pipelineValue = notLostDeals.reduce((sum, d) => sum + d.value, 0);
+  const weightedPipeline = notLostDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0);
+  const wonRevenue = wonDeals.reduce((sum, d) => sum + d.value, 0);
+  const openDealsCount = openDeals.length;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Pipeline</h1>
-            <p className="text-muted-foreground mt-1">Manage deals across all stages</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {selectedClient ? (
+                <span className="flex items-center gap-2">
+                  Pipeline
+                  <span className="text-muted-foreground font-normal">/</span>
+                  <span className="font-normal">{selectedClient.name}</span>
+                </span>
+              ) : (
+                'Pipeline'
+              )}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {selectedClient 
+                ? `Manage deals for ${selectedClient.name}` 
+                : 'Manage deals across all stages'}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Button variant="outline" className="gap-2">
+                <Users className="h-4 w-4" />
+                <span>
+                  {selectedClient?.name || 'All Clients'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-popover border border-border rounded-md shadow-lg hidden group-hover:block">
+                <Link 
+                  href="/pipeline" 
+                  className={`block px-4 py-2 text-sm ${!selectedClient ? 'bg-accent text-accent-foreground' : ''}`}
+                  onClick={() => {}}
+                >
+                  All Clients
+                </Link>
+                {clients.map((client) => (
+                  <Link
+                    key={client.id}
+                    href={`/pipeline?clientId=${client.id}`}
+                    className={`block px-4 py-2 text-sm ${selectedClient?.id === client.id ? 'bg-accent text-accent-foreground' : ''}`}
+                  >
+                    {client.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <Button variant="outline" size="icon">
               <Filter className="h-4 w-4" />
             </Button>
@@ -66,6 +123,33 @@ export function PipelineClient({ initialDeals, stages }: PipelineClientProps) {
               New Deal
             </Button>
           </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Pipeline Value</p>
+              <p className="text-2xl font-bold">{formatCurrency(pipelineValue)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Weighted Pipeline</p>
+              <p className="text-2xl font-bold">{formatCurrency(weightedPipeline)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Won Revenue</p>
+              <p className="text-2xl font-bold text-emerald-500">{formatCurrency(wonRevenue)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Open Deals</p>
+              <p className="text-2xl font-bold">{openDealsCount}</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex gap-4 overflow-x-auto pb-4">

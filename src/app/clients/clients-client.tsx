@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Filter, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 
 interface ClientWithMetrics {
@@ -90,14 +91,16 @@ export function ClientsClient({ initialClients }: ClientsClientProps) {
               <TableBody>
                 {filteredClients.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {client.companiesCount} companies • {client.contactsCount} contacts • {client.meetingsCount} meetings
-                        </p>
-                      </div>
-                    </TableCell>
+<TableCell>
+                        <div>
+                          <Link href={`/clients/${client.id}`} className="font-medium hover:underline">
+                            {client.name}
+                          </Link>
+                          <p className="text-sm text-muted-foreground">
+                            {client.companiesCount} companies • {client.contactsCount} contacts • {client.meetingsCount} meetings
+                          </p>
+                        </div>
+                      </TableCell>
                     <TableCell className="hidden md:table-cell">{client.domain || '—'}</TableCell>
                     <TableCell>
                       <Badge variant={client.status === 'ACTIVE' ? 'success' : 'secondary'}>

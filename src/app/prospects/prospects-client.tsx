@@ -26,6 +26,7 @@ interface ProspectWithRelations {
   metadata: string | null;
   client: { name: string; id: string } | null;
   campaign: { name: string; id: string } | null;
+  companyRecord: { id: string; name: string } | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -50,6 +51,7 @@ interface ProspectsClientProps {
   initialProspects: ProspectWithRelations[];
   campaigns: CampaignWithRelations[];
   clients: ClientBasic[];
+  selectedClientId?: string;
 }
 
 const STATUS_OPTIONS = ['all', 'NEW', 'ENRICHED', 'QUALIFIED', 'CONTACTED', 'ENGAGED', 'CONVERTED', 'DISQUALIFIED'] as const;
@@ -73,17 +75,17 @@ const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'succe
   }
 };
 
-export function ProspectsClient({ initialProspects, campaigns, clients }: ProspectsClientProps) {
+export function ProspectsClient({ initialProspects, campaigns, clients, selectedClientId }: ProspectsClientProps) {
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
-  const [clientFilter, setClientFilter] = React.useState('all');
+  const [clientFilter, setClientFilter] = React.useState(selectedClientId || 'all');
 
   const filteredProspects = initialProspects.filter((prospect) => {
     const matchesSearch =
       prospect.firstName.toLowerCase().includes(search.toLowerCase()) ||
       prospect.lastName.toLowerCase().includes(search.toLowerCase()) ||
       prospect.email.toLowerCase().includes(search.toLowerCase()) ||
-      prospect.company?.toLowerCase().includes(search.toLowerCase());
+      prospect.companyRecord?.name?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'all' || prospect.status === statusFilter;
     const matchesClient = clientFilter === 'all' || prospect.client?.id === clientFilter;
     return matchesSearch && matchesStatus && matchesClient;
@@ -181,7 +183,7 @@ export function ProspectsClient({ initialProspects, campaigns, clients }: Prospe
                         <p className="text-sm text-muted-foreground">{prospect.email}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{prospect.company || '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{prospect.companyRecord?.name || '—'}</TableCell>
                     <TableCell className="hidden md:table-cell">{prospect.title || '—'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant="outline" className="text-xs">
