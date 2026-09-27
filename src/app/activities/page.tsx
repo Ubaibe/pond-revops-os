@@ -13,12 +13,20 @@ export default async function ActivitiesPage({ searchParams }: ActivitiesPagePro
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.activity.findMany({
+     prisma.activity.findMany({
       where: clientId ? { clientId } : undefined,
       include: {
         client: true,
         deal: true,
         contact: true,
+        prospect: true,
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     }),

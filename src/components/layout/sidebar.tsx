@@ -18,6 +18,7 @@ import {
   BarChart3,
   Plug,
   Settings,
+  Clock,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -25,9 +26,13 @@ import {
 } from "lucide-react";
 import { NAV_ITEMS } from "@/data/types";
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
+
+export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const navigationItems = NAV_ITEMS.reduce(
@@ -46,10 +51,11 @@ export function Sidebar() {
     Target,
     Send,
     Calendar,
-    BarChart3,
-    Plug,
-    Settings,
-  };
+  BarChart3,
+  Plug,
+  Settings,
+  Clock,
+};
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";

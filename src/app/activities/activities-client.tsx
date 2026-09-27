@@ -4,7 +4,8 @@ import * as React from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2 } from 'lucide-react';
+import { Building2, Target } from 'lucide-react';
+import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils';
 
 interface ActivityWithRelations {
@@ -16,6 +17,8 @@ interface ActivityWithRelations {
   client: { name: string; id: string } | null;
   deal: { name: string; id: string } | null;
   contact: { firstName: string; lastName: string } | null;
+  prospect: { id: string; firstName: string; lastName: string; email: string; company: string | null; status: string } | null;
+  meeting: { id: string; title: string; startTime: Date | string } | null;
 }
 
 interface ClientOption {
@@ -91,21 +94,55 @@ export function ActivitiesClient({ activities, selectedClient }: ActivitiesClien
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <ActivityIcon className="h-4 w-4 text-primary" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">{activity.subject || typeLabel}</p>
-                        {activity.body && <p className="text-sm text-muted-foreground truncate mt-1">{activity.body}</p>}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {activity.client && (
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">{activity.subject || typeLabel}</p>
+                      {activity.body && <p className="text-sm text-muted-foreground truncate mt-1">{activity.body}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {activity.client && (
+                          <span className="inline-flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {activity.client.name}
+                          </span>
+                        )}
+                        {activity.prospect && (
+                          <>
+                            {' '}•{' '}
                             <span className="inline-flex items-center gap-1">
-                              <Building2 className="h-3 w-3" />
-                              {activity.client.name}
+                              <Target className="h-3 w-3" />
+                              Prospect:
+                              <Link href={`/prospects/${activity.prospect.id}`} className="hover:underline">
+                                {activity.prospect.firstName} {activity.prospect.lastName}
+                              </Link>
                             </span>
-                          )}
-                          {activity.deal && ` • ${activity.deal.name}`}
-                          {activity.contact && ` • ${activity.contact.firstName} ${activity.contact.lastName}`}
-                          {' '}• {formatRelativeTime(activity.createdAt)}
-                        </p>
-                      </div>
+                          </>
+                        )}
+                        {activity.deal && (
+                          <>
+                            {' '}•{' '}
+                            <Link href={`/deals/${activity.deal.id}`} className="hover:underline">
+                              Deal: {activity.deal.name}
+                            </Link>
+                          </>
+                        )}
+                         {activity.meeting && (
+                           <>
+                             {' '}•{' '}
+                             <Link href={selectedClient ? `/meetings?clientId=${selectedClient.id}` : '/meetings'} className="hover:underline">
+                               Meeting: {activity.meeting.title}
+                             </Link>
+                           </>
+                         )}
+                        {activity.contact && !activity.prospect && (
+                          <>
+                            {' '}•{' '}
+                            <span>
+                              {activity.contact.firstName} {activity.contact.lastName}
+                            </span>
+                          </>
+                        )}
+                        {' '}• {formatRelativeTime(activity.createdAt)}
+                      </p>
+                    </div>
                       <Badge variant="outline" className="text-xs">
                         {typeLabel}
                       </Badge>

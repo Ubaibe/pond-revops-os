@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, User, Mail, Phone, DollarSign, Target, Calendar, Clock, AlertCircle, CheckCircle, MinusCircle, TrendingUp, FileText, MessageSquare, Linkedin, Phone as PhoneIcon, ChevronRight, Users, Handshake, Activity, Briefcase, GitBranch, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Building2, User, Mail, Phone, DollarSign, Target, Calendar, Clock, AlertCircle, CheckCircle, MinusCircle, TrendingUp, FileText, MessageSquare, Linkedin, Phone as PhoneIcon, ChevronRight, Users, Handshake, Activity, Briefcase, GitBranch, BarChart3, Send } from 'lucide-react';
 import { formatCurrency, formatRelativeTime, formatDate, cn } from '@/lib/utils';
 import { parseMeetingMetadata, MeetingMetadata, getSentimentColor } from '@/lib/meeting-utils';
 
@@ -156,8 +156,6 @@ export function ClientDetailClient({ client, meetingsWithIntelligence }: ClientD
   const openDealsCount = openDeals.length;
 
   const recentActivities = client.activities.slice(0, 10);
-  const recentMeetings = meetingsWithIntelligence.slice(0, 10);
-  const recentProspects = client.prospects.slice(0, 10);
 
   return (
     <DashboardLayout>
@@ -181,6 +179,18 @@ export function ClientDetailClient({ client, meetingsWithIntelligence }: ClientD
             <Button variant="outline" className="gap-2">
               <GitBranch className="h-4 w-4" />
               View Pipeline
+            </Button>
+          </Link>
+          <Link href={`/prospects?clientId=${client.id}`}>
+            <Button variant="outline" className="gap-2">
+              <Target className="h-4 w-4" />
+              View Prospects
+            </Button>
+          </Link>
+          <Link href={`/outbound?clientId=${client.id}`}>
+            <Button variant="outline" className="gap-2">
+              <Send className="h-4 w-4" />
+              View Outbound
             </Button>
           </Link>
           <Link href={`/reports?clientId=${client.id}`}>

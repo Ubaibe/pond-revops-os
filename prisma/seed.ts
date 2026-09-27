@@ -998,6 +998,76 @@ async function main() {
 
   console.log('✅ Created 30 prospects');
 
+  // ------------------------------------------------------------------
+  // Attach a realistic subset of existing activities to Prospects.
+  //
+  // Activities were generated from Deals (dealId / contactId / clientId).
+  // We now retroactively attribute a deterministic subset of outbound-
+  // type activities to prospects, constrained so that:
+  //   • activity.clientId === prospect.clientId  (no cross-client join)
+  //   • activity.dealId and activity.contactId already share the same client
+  //   • the activity is not already meeting-linked (preserves Meeting chain)
+  //   • the activity has no existing prospectId (idempotent re-seed)
+  //
+  // We target ~2-3 activities per engaged/contacted/qualified prospect,
+  // yielding approximately 20-40 prospect-attributed activities.
+  // ------------------------------------------------------------------
+  const allProspects = await prisma.prospect.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const allActivities = await prisma.activity.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const PROSPECT_ACTIVITY_TYPES = ['EMAIL_SENT', 'EMAIL_OPENED', 'EMAIL_REPLIED', 'LINKEDIN_TASK', 'CALL'];
+
+  let prospectActivityCount = 0;
+
+  for (const prospect of allProspects) {
+    // Only attribute activities to prospects that are in the outreach pipeline
+    const eligibleStatuses = ['NEW', 'ENRICHED', 'QUALIFIED', 'CONTACTED', 'ENGAGED'];
+    if (!eligibleStatuses.includes(prospect.status)) {
+      continue;
+    }
+
+    // Deterministic number of activities to attach: based on prospect index
+    // and score, using only arithmetic — no randomness.
+    const scoreFactor = Math.floor(prospect.score / 25); // 0-3
+    const numActivitiesToAttach = 1 + (allProspects.indexOf(prospect) % 3) + scoreFactor;
+    const targetCount = Math.min(numActivitiesToAttach, 3);
+
+    // Find candidate activities: same client, outbound type, no prospectId,
+    // and not meeting-linked (to preserve the Meeting relationship chain).
+    const candidates = allActivities.filter(
+      a =>
+        a.clientId === prospect.clientId &&
+        PROSPECT_ACTIVITY_TYPES.includes(a.type) &&
+        !a.prospectId &&
+        !a.meetingId &&
+        a.dealId && // keep deal attribution where possible
+        a.contactId,
+    );
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    // Deterministic selection: pick activities by stride based on prospect index
+    const prospectIndex = allProspects.indexOf(prospect);
+    for (let ai = 0; ai < targetCount && ai < candidates.length; ai++) {
+      const candidateIdx = (prospectIndex * 3 + ai) % candidates.length;
+      const activity = candidates[candidateIdx];
+      await prisma.activity.update({
+        where: { id: activity.id },
+        data: { prospectId: prospect.id },
+      });
+      prospectActivityCount++;
+    }
+  }
+
+  console.log(`✅ Linked ${prospectActivityCount} prospect-attributed activities`);
+
   const clientCount = await prisma.client.count();
   const companyCount = await prisma.company.count();
   const contactCount = await prisma.contact.count();
@@ -1006,7 +1076,7 @@ async function main() {
   const meetingCount = await prisma.meeting.count();
   const prospectCount = await prisma.prospect.count();
 
-  console.log(`📊 Seed complete: ${clientCount} clients, ${companyCount} companies, ${contactCount} contacts, ${dealCount} deals, ${activityCount} activities, ${meetingCount} meetings, ${prospectCount} prospects`);
+  console.log(`📊 Seed complete: ${clientCount} clients, ${companyCount} companies, ${contactCount} contacts, ${dealCount} deals, ${activityCount} activities, ${prospectActivityCount} prospect-attributed activities, ${meetingCount} meetings, ${prospectCount} prospects`);
 }
 
 main()

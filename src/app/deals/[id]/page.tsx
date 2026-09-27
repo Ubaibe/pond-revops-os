@@ -3,8 +3,14 @@ import { notFound } from 'next/navigation';
 import { DealDetailClient } from './deal-detail-client';
 import { parseMeetingMetadata } from '@/lib/meeting-utils';
 
-export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+interface DealDetailPageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ clientId?: string }>;
+}
+
+export default async function DealDetailPage({ params, searchParams }: DealDetailPageProps) {
   const { id } = await params;
+  const { clientId } = await searchParams;
 
   const deal = await prisma.deal.findUnique({
     where: { id },
@@ -18,6 +24,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       meetings: {
         orderBy: { startTime: 'desc' },
       },
+      convertedProspects: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          company: true,
+          status: true,
+        },
+      },
     },
   });
 
@@ -30,5 +46,5 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     intelligence: parseMeetingMetadata(meeting.metadata),
   }));
 
-  return <DealDetailClient deal={deal} meetingsWithIntelligence={meetingsWithIntelligence} />;
+  return <DealDetailClient deal={deal} meetingsWithIntelligence={meetingsWithIntelligence} clientId={clientId} />;
 }

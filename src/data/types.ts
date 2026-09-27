@@ -139,6 +139,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Prospects', href: '/prospects', icon: 'Target', section: 'workspace' },
   { label: 'Outbound', href: '/outbound', icon: 'Send', section: 'workspace' },
   { label: 'Meetings', href: '/meetings', icon: 'Calendar', section: 'workspace' },
+  { label: 'Activities', href: '/activities', icon: 'Clock', section: 'workspace' },
   { label: 'Reports', href: '/reports', icon: 'BarChart3', section: 'workspace' },
   { label: 'Integrations', href: '/integrations', icon: 'Plug', section: 'system' },
   { label: 'Settings', href: '/settings', icon: 'Settings', section: 'system' },

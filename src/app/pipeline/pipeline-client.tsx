@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, MoreHorizontal, DollarSign, Users, ChevronDown } from 'lucide-react';
+import { DollarSign, Users, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { DEAL_STAGES } from '@/data/types';
@@ -88,7 +88,7 @@ export function PipelineClient({ initialDeals, stages, clients, selectedClient }
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
+            <div className="relative group">
               <Button variant="outline" className="gap-2">
                 <Users className="h-4 w-4" />
                 <span>
@@ -115,13 +115,6 @@ export function PipelineClient({ initialDeals, stages, clients, selectedClient }
                 ))}
               </div>
             </div>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Deal
-            </Button>
           </div>
         </div>
 
@@ -192,21 +185,15 @@ export function PipelineClient({ initialDeals, stages, clients, selectedClient }
                           </span>
                           <span className="text-sm font-medium">{formatCurrency(deal.value)}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {deal.probability}%
-                          </Badge>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </div>
+                       <div className="flex items-center justify-between mt-1">
+                           <Badge variant="outline" className="text-xs">
+                             {deal.probability}%
+                           </Badge>
+                         </div>
                       </div>
                     ))}
-                    <Button variant="outline" className="w-full text-xs py-1.5" style={{ marginTop: '0.5rem' }}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Deal
-                    </Button>
-                  </div>
+                      
+                   </div>
                 </CardContent>
               </Card>
             );

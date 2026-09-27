@@ -9,15 +9,16 @@ export default async function ProspectsPage({ searchParams }: ProspectsPageProps
   const { clientId } = await searchParams;
 
   const [prospects, campaigns, clients] = await Promise.all([
-    prisma.prospect.findMany({
-      where: clientId ? { clientId } : undefined,
-      include: {
-        client: true,
-        campaign: true,
-        companyRecord: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
+     prisma.prospect.findMany({
+       where: clientId ? { clientId } : undefined,
+       include: {
+         client: true,
+         campaign: true,
+         companyRecord: true,
+         convertedDeal: true,
+       },
+       orderBy: { createdAt: 'desc' },
+     }),
     prisma.campaign.findMany({
       include: { client: true },
       orderBy: { createdAt: 'desc' },

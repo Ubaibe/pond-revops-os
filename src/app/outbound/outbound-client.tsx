@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Send, Clock, CheckCircle, XCircle, Loader2, Zap, Target, Mail, MessageSquare, Reply, Linkedin } from 'lucide-react';
+import { Send, Clock, CheckCircle, XCircle, Zap, Target, Linkedin, ExternalLink, Users } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils';
+import Link from 'next/link';
 
 interface Sequence {
   id: string;
   name: string;
   campaignId: string;
+  clientId: string;
   client: string | null;
   type: string;
   status: string;
@@ -30,6 +32,10 @@ interface ActivityFeedItem {
   time: Date | string;
   status: string;
   client: string | null;
+  clientId: string;
+  dealId: string | null;
+  prospectId: string | null;
+  meetingId: string | null;
 }
 
 interface Metrics {
@@ -44,18 +50,6 @@ interface Metrics {
   linkedInTasks: number;
 }
 
-interface CampaignWithRelations {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  metadata: string | null;
-  client: { name: string } | null;
-  prospects: Array<{ id: string }>;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-}
-
 interface ProspectWithRelations {
   id: string;
   firstName: string;
@@ -68,24 +62,20 @@ interface ProspectWithRelations {
   source: string | null;
   status: string;
   score: number;
+  clientId: string;
+  campaignId: string | null;
   client: { name: string } | null;
   campaign: { name: string } | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
 
-interface ClientBasic {
-  id: string;
-  name: string;
-}
-
 interface OutboundClientProps {
   sequences: Sequence[];
   activityFeed: ActivityFeedItem[];
   metrics: Metrics;
-  campaigns: CampaignWithRelations[];
   prospects: ProspectWithRelations[];
-  clients: ClientBasic[];
+  selectedClient: { id: string; name: string; domain: string | null } | null;
 }
 
 const getActivityIcon = (type: string) => {
@@ -126,26 +116,52 @@ const getSequenceStatusVariant = (status: string): 'success' | 'secondary' => {
   return status === 'ACTIVE' ? 'success' : 'secondary';
 };
 
-export function OutboundClient({ sequences, activityFeed, metrics, campaigns, prospects, clients }: OutboundClientProps) {
+export function OutboundClient({ sequences, activityFeed, metrics, prospects, selectedClient }: OutboundClientProps) {
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">Outbound</h1>
-            <p className="text-muted-foreground mt-1">Manage outbound sequences and campaigns</p>
+            {selectedClient && (
+              <>
+                <span className="text-muted-foreground">/</span>
+                <Link href={`/clients/${selectedClient.id}`} className="text-lg font-semibold text-primary hover:underline">
+                  {selectedClient.name}
+                </Link>
+              </>
+            )}
           </div>
+          <p className="text-muted-foreground mt-1 sm:mt-0">Manage outbound sequences and campaigns</p>
           <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Target className="h-4 w-4 mr-2" />
-              Enroll Prospects
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Campaign
+            <Button variant="outline" asChild>
+              <Link href={selectedClient ? `/prospects?clientId=${selectedClient.id}` : `/prospects`}>
+                <Target className="h-4 w-4 mr-2" />
+                View Prospects
+              </Link>
             </Button>
           </div>
         </div>
+
+        {selectedClient && (
+          <div className="flex items-center gap-4 text-sm">
+            <Link href={`/clients/${selectedClient.id}`} className="text-primary hover:underline">
+              Client Dashboard
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href={`/prospects?clientId=${selectedClient.id}`} className="text-primary hover:underline">
+              Prospects
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href={`/pipeline?clientId=${selectedClient.id}`} className="text-primary hover:underline">
+              Pipeline
+            </Link>
+            <span className="text-muted-foreground">•</span>
+            <Link href={`/reports?clientId=${selectedClient.id}`} className="text-primary hover:underline">
+              Reports
+            </Link>
+          </div>
+        )}
 
         {/* Metrics Row */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -230,20 +246,22 @@ export function OutboundClient({ sequences, activityFeed, metrics, campaigns, pr
                       <span className="text-xs text-muted-foreground flex-1 text-center">
                         Client: {seq.client || '—'} • Type: {seq.type}
                       </span>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Clock className="h-3 w-3 mr-1" />
-                        View Steps
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <Link href={`/prospects?clientId=${seq.clientId}&campaignId=${seq.campaignId}`}>
+                          <Users className="h-3 w-3 mr-1" />
+                          View Prospects
+                        </Link>
                       </Button>
-                      <Button variant={seq.status === "ACTIVE" ? "outline" : "default"} size="sm" className="flex-1">
+                      <Button variant={seq.status === "ACTIVE" ? "outline" : "default"} size="sm" className="flex-1" disabled>
                         {seq.status === "ACTIVE" ? (
                           <>
                             <XCircle className="h-3 w-3 mr-1" />
-                            Pause
+                            Paused
                           </>
                         ) : (
                           <>
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Resume
+                            Paused
                           </>
                         )}
                       </Button>
@@ -268,32 +286,42 @@ export function OutboundClient({ sequences, activityFeed, metrics, campaigns, pr
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {activityFeed.length > 0 ? (
-                    activityFeed.map((act) => (
-                      <div key={act.id} className="p-4 flex items-center gap-4 hover:bg-muted/50">
-                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                          {getActivityIcon(act.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{act.prospect}</p>
-                          <p className="text-sm text-muted-foreground">{act.subject}</p>
-                        </div>
-                        {act.client && (
-                          <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
-                            {act.client}
-                          </span>
-                        )}
-                        <Badge
-                          variant={getStatusBadgeVariant(act.status)}
-                          className="text-xs"
-                        >
-                          {act.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground w-24 text-right">
-                          {formatRelativeTime(act.time)}
-                        </span>
-                      </div>
-                    ))
+                   {activityFeed.length > 0 ? (
+                     activityFeed.map((act) => (
+                       <div key={act.id} className="p-4 flex items-center gap-4 hover:bg-muted/50">
+                         <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                           {getActivityIcon(act.type)}
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           {act.prospectId ? (
+                             <Link href={`/prospects/${act.prospectId}`} className="font-medium text-primary hover:underline">
+                               {act.prospect}
+                             </Link>
+                           ) : (
+                             <p className="font-medium">{act.prospect}</p>
+                           )}
+                           <p className="text-sm text-muted-foreground">{act.subject}</p>
+                         </div>
+                         {act.dealId ? (
+                           <Link href={`/deals/${act.dealId}`} className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded hover:bg-accent">
+                             <ExternalLink className="h-3 w-3" />
+                           </Link>
+                         ) : act.client && (
+                           <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                             {act.client}
+                           </span>
+                         )}
+                         <Badge
+                           variant={getStatusBadgeVariant(act.status)}
+                           className="text-xs"
+                         >
+                           {act.status}
+                         </Badge>
+                         <span className="text-xs text-muted-foreground w-24 text-right">
+                           {formatRelativeTime(act.time)}
+                         </span>
+                       </div>
+                     ))
                   ) : (
                     <div className="p-8 text-center text-muted-foreground">
                       No outbound activity recorded yet.
@@ -383,17 +411,11 @@ export function OutboundClient({ sequences, activityFeed, metrics, campaigns, pr
           <TabsContent value="templates">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Email Templates</CardTitle>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Template
-                  </Button>
-                </div>
+                <CardTitle>Email Templates</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-center py-8">
-                  Template management coming soon. Templates are managed per campaign in the actual workflow.
+                  Template management is not yet available. Templates are managed per campaign in the actual workflow.
                 </p>
               </CardContent>
             </Card>

@@ -9,20 +9,26 @@ interface MeetingsPageProps {
 export default async function MeetingsPage({ searchParams }: MeetingsPageProps) {
   const { clientId } = await searchParams;
 
-  const meetings = await prisma.meeting.findMany({
-    where: clientId ? { clientId } : undefined,
-    include: {
-      client: true,
-      deal: true,
-      contact: true,
-    },
-    orderBy: { startTime: 'desc' },
-  });
+  const [meetings, selectedClient] = await Promise.all([
+    prisma.meeting.findMany({
+      where: clientId ? { clientId } : undefined,
+      include: {
+        client: true,
+        deal: true,
+        contact: true,
+      },
+      orderBy: { startTime: 'desc' },
+    }),
+    clientId ? prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, name: true },
+    }) : null,
+  ]);
 
   const meetingsWithIntelligence = meetings.map(meeting => ({
     ...meeting,
     intelligence: parseMeetingMetadata(meeting.metadata),
   }));
 
-  return <MeetingsClient initialMeetings={meetingsWithIntelligence} />;
+  return <MeetingsClient initialMeetings={meetingsWithIntelligence} selectedClient={selectedClient} />;
 }

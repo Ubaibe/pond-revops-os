@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Filter, MoreHorizontal } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 
@@ -51,10 +51,6 @@ export function ClientsClient({ initialClients }: ClientsClientProps) {
             <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
             <p className="text-muted-foreground mt-1">Manage client accounts and relationships</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Client
-          </Button>
         </div>
 
         <Card>
@@ -84,9 +80,8 @@ export function ClientsClient({ initialClients }: ClientsClientProps) {
                   <TableHead className="text-right">Won Revenue</TableHead>
                   <TableHead className="text-right hidden lg:table-cell">Companies</TableHead>
                   <TableHead className="text-right hidden lg:table-cell">Contacts</TableHead>
-                  <TableHead className="text-right hidden lg:table-cell">Prospects</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
+                   <TableHead className="text-right hidden lg:table-cell">Prospects</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
@@ -112,13 +107,8 @@ export function ClientsClient({ initialClients }: ClientsClientProps) {
                     <TableCell className="text-right font-medium">{formatCurrency(client.wonRevenue)}</TableCell>
                     <TableCell className="text-right text-muted-foreground hidden lg:table-cell">{client.companiesCount}</TableCell>
                     <TableCell className="text-right text-muted-foreground hidden lg:table-cell">{client.contactsCount}</TableCell>
-                    <TableCell className="text-right text-muted-foreground hidden lg:table-cell">{client.prospectsCount}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                     <TableCell className="text-right text-muted-foreground hidden lg:table-cell">{client.prospectsCount}</TableCell>
+                   </TableRow>
                 ))}
               </TableBody>
             </Table>

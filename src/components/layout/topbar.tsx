@@ -24,9 +24,17 @@ const pageTitles: Record<string, { title: string; breadcrumb?: string }> = {
   "/prospects": { title: "Prospects" },
   "/outbound": { title: "Outbound" },
   "/meetings": { title: "Meetings" },
+  "/activities": { title: "Activities" },
   "/reports": { title: "Reports" },
   "/integrations": { title: "Integrations" },
   "/settings": { title: "Settings" },
+};
+
+const getPageInfo = (pathname: string): { title: string; breadcrumb?: string } => {
+  if (pageTitles[pathname]) return pageTitles[pathname];
+  if (pathname.startsWith("/clients/")) return { title: "Client" };
+  if (pathname.startsWith("/deals/")) return { title: "Deal" };
+  return { title: "Dashboard" };
 };
 
 export function TopBar() {
@@ -49,7 +57,7 @@ export function TopBar() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  const pageInfo = pageTitles[pathname] || { title: "Dashboard" };
+  const pageInfo = getPageInfo(pathname);
 
   return (
     <header className="sticky top-0 z-30 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -1,9 +1,29 @@
 import { prisma } from '@/lib/prisma';
 import { OutboundClient } from './outbound-client';
+import { notFound } from 'next/navigation';
 
-export default async function OutboundPage() {
-  const [campaigns, prospects, activities, clients] = await Promise.all([
+interface OutboundPageProps {
+  searchParams: Promise<{ clientId?: string }>;
+}
+
+export default async function OutboundPage({ searchParams }: OutboundPageProps) {
+  const { clientId } = await searchParams;
+
+  // Validate clientId if supplied — do not fall back to all-client data
+  let selectedClient = null;
+  if (clientId) {
+    selectedClient = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, name: true, domain: true },
+    });
+    if (!selectedClient) {
+      notFound();
+    }
+  }
+
+  const [campaigns, prospects, activities] = await Promise.all([
     prisma.campaign.findMany({
+      where: clientId ? { clientId } : undefined,
       include: {
         client: true,
         prospects: true,
@@ -11,16 +31,31 @@ export default async function OutboundPage() {
       orderBy: { createdAt: 'desc' },
     }),
     prisma.prospect.findMany({
-      include: { client: true, campaign: true },
+      where: clientId ? { clientId } : undefined,
+      include: {
+        client: true,
+        campaign: true,
+        companyRecord: true,
+      },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.activity.findMany({
-      include: { client: true, deal: true, contact: true },
+      where: clientId ? { clientId } : undefined,
+      include: {
+        client: true,
+        deal: true,
+        contact: true,
+        prospect: true,
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
-    }),
-    prisma.client.findMany({
-      orderBy: { name: 'asc' },
     }),
   ]);
 
@@ -38,6 +73,7 @@ export default async function OutboundPage() {
       id: campaign.id,
       name: campaign.name,
       campaignId: campaign.id,
+      clientId: campaign.clientId,
       client: campaign.client?.name,
       type: campaign.type,
       status: campaign.status,
@@ -53,10 +89,12 @@ export default async function OutboundPage() {
     .filter(a => ['EMAIL_SENT', 'EMAIL_OPENED', 'EMAIL_REPLIED', 'LINKEDIN_TASK', 'CALL'].includes(a.type))
     .map(a => {
       let prospectName = 'Unknown';
-      if (a.contact) {
-        prospectName = `${a.contact.firstName} ${a.contact.lastName}`;
+      if (a.prospect) {
+        prospectName = `${a.prospect.firstName} ${a.prospect.lastName}`;
       } else if (a.deal) {
         prospectName = a.deal.name;
+      } else if (a.contact) {
+        prospectName = `${a.contact.firstName} ${a.contact.lastName}`;
       }
       return {
         id: a.id,
@@ -69,6 +107,10 @@ export default async function OutboundPage() {
                 a.type === 'EMAIL_REPLIED' ? 'REPLIED' :
                 a.type === 'LINKEDIN_TASK' ? 'PENDING' : 'COMPLETED',
         client: a.client?.name,
+        clientId: a.clientId,
+        dealId: a.dealId ?? null,
+        prospectId: a.prospectId ?? null,
+        meetingId: a.meetingId ?? null,
       };
     });
 
@@ -93,8 +135,7 @@ export default async function OutboundPage() {
     sequences={sequences}
     activityFeed={activityFeed}
     metrics={metrics}
-    campaigns={campaigns}
     prospects={prospects}
-    clients={clients}
+    selectedClient={selectedClient}
   />;
 }

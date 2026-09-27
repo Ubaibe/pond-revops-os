@@ -1,8 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Users,
@@ -65,6 +67,7 @@ interface PipelineStage {
 }
 
 interface ClientBreakdown {
+  id: string;
   name: string;
   pipelineValue: number;
   openDealsCount: number;
@@ -117,43 +120,43 @@ export function DashboardClient({
       label: 'Active Clients',
       value: stats.activeClients,
       icon: Users,
-      change: '+2 this month',
-      changeType: 'positive' as const,
+      description: 'Current active clients',
+      href: '/clients',
     },
     {
       label: 'Open Deals',
       value: stats.openDeals,
       icon: GitBranch,
-      change: '+5 this quarter',
-      changeType: 'positive' as const,
+      description: 'Current open opportunities',
+      href: '/pipeline',
     },
     {
       label: 'Weighted Pipeline',
       value: formatCurrency(stats.pipelineValue),
       icon: DollarSign,
-      change: '+12% vs last quarter',
-      changeType: 'positive' as const,
+      description: 'Probability-weighted pipeline value',
+      href: '/pipeline',
     },
     {
       label: 'Won Revenue',
       value: formatCurrency(stats.wonRevenue),
       icon: TrendingUp,
-      change: '+8% vs last quarter',
-      changeType: 'positive' as const,
+      description: 'Closed-won value',
+      href: '/pipeline',
     },
     {
       label: 'Meetings',
       value: stats.meetings,
       icon: Calendar,
-      change: '+3 this week',
-      changeType: 'positive' as const,
+      description: 'Scheduled and completed meetings',
+      href: '/meetings',
     },
     {
       label: 'Active Prospects',
       value: stats.prospects,
       icon: Target,
-      change: '+18 this week',
-      changeType: 'positive' as const,
+      description: 'Non-converted prospects',
+      href: '/prospects',
     },
   ];
 
@@ -169,16 +172,18 @@ export function DashboardClient({
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {statCards.map((stat) => (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.change}</p>
-              </CardContent>
-            </Card>
+            <Link key={stat.label} href={stat.href} className="block">
+              <Card className="h-full transition-none">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                  <stat.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">{stat.description}</p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 
@@ -212,6 +217,11 @@ export function DashboardClient({
                   <div className="p-4 text-center text-muted-foreground">No open deals</div>
                 )}
               </div>
+              <Link href="/pipeline">
+                <Button variant="link" className="p-0 h-auto text-xs">
+                  View all →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -246,6 +256,11 @@ export function DashboardClient({
                   <div className="p-4 text-center text-muted-foreground">No upcoming meetings</div>
                 )}
               </div>
+              <Link href="/meetings">
+                <Button variant="link" className="p-0 h-auto text-xs">
+                  View all →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -287,12 +302,18 @@ export function DashboardClient({
                   <div className="p-4 text-center text-muted-foreground">No recent activity</div>
                 )}
               </div>
+              <Link href="/activities">
+                <Button variant="link" className="p-0 h-auto text-xs">
+                  View all →
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Pipeline by Stage</CardTitle>
+              <CardDescription>Total deal value by stage</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -316,6 +337,7 @@ export function DashboardClient({
         <Card>
           <CardHeader>
             <CardTitle>Pipeline by Client</CardTitle>
+            <CardDescription>Total deal value by client</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -327,7 +349,9 @@ export function DashboardClient({
                         <Building2 className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{client.name}</p>
+                        <Link href={`/clients/${client.id}`} className="font-medium hover:underline">
+                          {client.name}
+                        </Link>
                         <p className="text-sm text-muted-foreground">{client.openDealsCount} open deals</p>
                       </div>
                     </div>
@@ -342,56 +366,64 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3">
+        <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <button className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <GitBranch className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Create New Deal</p>
-                    <p className="text-sm text-muted-foreground">Add a deal to the pipeline</p>
-                  </div>
-                </div>
-              </button>
-              <button className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Add Prospect</p>
-                    <p className="text-sm text-muted-foreground">Enrich and add new prospects</p>
+              <Link href="/pipeline" className="block">
+                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <GitBranch className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">View Pipeline</p>
+                      <p className="text-sm text-muted-foreground">Review deals across stages</p>
+                    </div>
                   </div>
                 </div>
-              </button>
-              <button className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Schedule Meeting</p>
-                    <p className="text-sm text-muted-foreground">Book a meeting with a contact</p>
-                  </div>
-                </div>
-              </button>
-              <button className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">New Client</p>
-                    <p className="text-sm text-muted-foreground">Onboard a new client account</p>
+              </Link>
+              <Link href="/prospects" className="block">
+                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <Target className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">View Prospects</p>
+                      <p className="text-sm text-muted-foreground">Review prospect pipeline</p>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </Link>
+              <Link href="/meetings" className="block">
+                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">View Meetings</p>
+                      <p className="text-sm text-muted-foreground">Review scheduled meetings</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/clients" className="block">
+                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">View Clients</p>
+                      <p className="text-sm text-muted-foreground">Browse client accounts</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             </div>
           </CardContent>
         </Card>

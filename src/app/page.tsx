@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   const wonRevenue = wonDeals.reduce((sum, d) => sum + d.value, 0);
   const openDealsCount = openDeals.length;
   const meetingsCount = meetings.length;
-  const prospectsCount = prospects.length;
+  const prospectsCount = prospects.filter(p => p.status !== 'CONVERTED').length;
 
   const recentDeals = openDeals
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -68,6 +68,7 @@ export default async function DashboardPage() {
     const clientNotLostDeals = clientDeals.filter(d => d.stage !== 'LOST');
 
     return {
+      id: client.id,
       name: client.name,
       pipelineValue: clientNotLostDeals.reduce((sum, d) => sum + d.value, 0),
       openDealsCount: clientOpenDeals.length,

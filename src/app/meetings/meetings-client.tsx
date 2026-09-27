@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Filter, Calendar, Video, MoreHorizontal, ChevronLeft, ChevronRight, Building2, Target, Users, MessageSquare, TrendingUp } from 'lucide-react';
+import { Calendar, Video, ChevronLeft, ChevronRight, Building2, Target, Users, MessageSquare, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import { getSentimentColor } from '@/lib/meeting-utils';
@@ -39,9 +39,10 @@ interface MeetingWithIntelligence {
 
 interface MeetingsClientProps {
   initialMeetings: MeetingWithIntelligence[];
+  selectedClient: { id: string; name: string } | null;
 }
 
-export function MeetingsClient({ initialMeetings }: MeetingsClientProps) {
+export function MeetingsClient({ initialMeetings, selectedClient }: MeetingsClientProps) {
   const [currentWeek, setCurrentWeek] = React.useState(new Date());
   const [view, setView] = React.useState<'list' | 'week'>('list');
 
@@ -72,8 +73,20 @@ export function MeetingsClient({ initialMeetings }: MeetingsClientProps) {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Meetings</h1>
-            <p className="text-muted-foreground mt-1">Schedule and manage meetings</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {selectedClient ? (
+                <span className="flex items-center gap-2">
+                  Meetings
+                  <span className="text-muted-foreground font-normal">/</span>
+                  <span className="font-normal">{selectedClient.name}</span>
+                </span>
+              ) : (
+                'Meetings'
+              )}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {selectedClient ? `Meetings for ${selectedClient.name}` : 'Review meeting recordings and intelligence'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setCurrentWeek(new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000))}>
@@ -87,10 +100,6 @@ export function MeetingsClient({ initialMeetings }: MeetingsClientProps) {
             </Button>
             <Button variant="outline" onClick={() => setCurrentWeek(new Date())}>
               Today
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule
             </Button>
           </div>
         </div>
@@ -188,13 +197,8 @@ export function MeetingsClient({ initialMeetings }: MeetingsClientProps) {
                             ) : (
                               <span className="text-sm text-muted-foreground">—</span>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                           </TableCell>
+                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
@@ -245,22 +249,22 @@ export function MeetingsClient({ initialMeetings }: MeetingsClientProps) {
                           <TableCell>
                             <Badge variant="outline" className="text-xs">{meeting.platform || 'TBD'}</Badge>
                           </TableCell>
-                          <TableCell>
-                            {meeting.recordingUrl ? (
-                              <Button variant="ghost" size="sm">
-                                <Video className="h-3 w-3 mr-1" />
-                                View
-                              </Button>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">No recording</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                           <TableCell>
+                             {meeting.recordingUrl ? (
+                               <a
+                                 href={meeting.recordingUrl}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="inline-flex items-center text-sm text-primary hover:underline"
+                               >
+                                 <Video className="h-3 w-3 mr-1" />
+                                 View recording
+                               </a>
+                             ) : (
+                               <span className="text-sm text-muted-foreground">Demo recording</span>
+                             )}
+                            </TableCell>
+                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>

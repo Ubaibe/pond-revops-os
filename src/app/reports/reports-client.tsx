@@ -22,7 +22,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Download, Filter, Calendar, Users, ChevronDown } from 'lucide-react';
+import { Users, ChevronDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 interface StageData {
@@ -137,18 +137,6 @@ export function ReportsClient({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Last 6 months
-            </Button>
-            <Button>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
           </div>
         </div>
 

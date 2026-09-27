@@ -41,6 +41,14 @@ interface DealWithRelations {
     metadata: string | null;
     createdAt: Date | string;
   }>;
+  convertedProspects: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    company: string | null;
+    status: string;
+  }>;
 }
 
 interface MeetingWithIntelligence {
@@ -69,6 +77,7 @@ interface MeetingWithIntelligence {
 interface DealDetailClientProps {
   deal: DealWithRelations;
   meetingsWithIntelligence: MeetingWithIntelligence[];
+  clientId?: string;
 }
 
 const getDealStageColor = (stage: string): string => {
@@ -123,7 +132,7 @@ const getActivityTypeIcon = (type: string) => {
   return icons[type] || FileText;
 };
 
-export function DealDetailClient({ deal, meetingsWithIntelligence }: DealDetailClientProps) {
+export function DealDetailClient({ deal, meetingsWithIntelligence, clientId }: DealDetailClientProps) {
   const isOpen = deal.stage !== 'WON' && deal.stage !== 'LOST';
 
   return (
@@ -131,7 +140,7 @@ export function DealDetailClient({ deal, meetingsWithIntelligence }: DealDetailC
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/pipeline">
+            <Link href={clientId ? `/pipeline?clientId=${clientId}` : "/pipeline"}>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -251,13 +260,33 @@ export function DealDetailClient({ deal, meetingsWithIntelligence }: DealDetailC
                   <CardTitle>Deal Metadata</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-sm text-muted-foreground p-4 bg-muted rounded overflow-x-auto">
-                    {deal.metadata}
-                  </pre>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                <pre className="text-sm text-muted-foreground p-4 bg-muted rounded overflow-x-auto">
+                  {deal.metadata}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+
+          {deal.convertedProspects.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Converted from Prospect</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                 {deal.convertedProspects.map((prospect) => (
+                   <div key={prospect.id} className="space-y-1">
+                     <Link href={`/prospects/${prospect.id}`} className="font-medium hover:underline block">
+                       {prospect.firstName} {prospect.lastName}
+                     </Link>
+                    {prospect.email && (
+                      <p className="text-sm text-muted-foreground">{prospect.email}</p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
             <Card>
